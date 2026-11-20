@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ExternalLink, Plus, Trash2, Trophy } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { Plus, RefreshCw, Trash2, Trophy } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
   Bar,
@@ -37,6 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { buildReport, summarize, type Trend } from "@/lib/analysis";
 import { MODES, profileQuery, todayKey, tournamentsQuery } from "@/lib/queries";
+import { importFromTracker } from "@/lib/tracker.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/tournaments")({
@@ -70,6 +72,7 @@ function TournamentsPage() {
   const { data: tournaments } = useSuspenseQuery(tournamentsQuery);
   const summary = summarize(tournaments);
   const report = buildReport(summary);
+  const hasPoints = tournaments.some((t) => t.points > 0);
   const chartData = tournaments.map((t, i) => ({
     label: `${i + 1}`,
     name: t.name,
@@ -83,7 +86,7 @@ function TournamentsPage() {
       <PageHeader
         eyebrow="Tournament Tracker"
         title="מעקב טורנירים"
-        description="כל טורניר שאתה מוסיף נכנס לניתוח: מקום, קילים, נקודות וקונסיסטנטיות."
+        description="הטורנירים נמשכים אוטומטית מ-Fortnite Tracker (או נוספים ידנית) ונכנסים לניתוח: מקום, קילים, נקודות וקונסיסטנטיות."
         action={<AddTournamentDialog />}
       />
 
@@ -110,8 +113,9 @@ function TournamentsPage() {
         />
         <StatCard
           label="נקודות ממוצע"
-          value={summary.count ? Math.round(summary.avgPoints).toString() : "—"}
-          trend={summary.points.trend}
+          value={hasPoints ? Math.round(summary.avgPoints).toString() : "—"}
+          sub={!hasPoints && summary.count ? "Fortnite Tracker לא מציג נקודות" : undefined}
+          {...(hasPoints ? { trend: summary.points.trend } : {})}
         />
         <StatCard
           label="קונסיסטנטיות"
@@ -227,44 +231,58 @@ function ChartPanel({ title, hint, children }: { title: string; hint: string; ch
 function TrackerCard() {
   const { user } = Route.useRouteContext();
   const queryClient = useQueryClient();
+  const runImport = useServerFn(importFromTracker);
   const { data: profile } = useSuspenseQuery(profileQuery(user.id));
   const [epic, setEpic] = useState(profile?.epic_username ?? "");
 
-  const save = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({ id: user.id, epic_username: epic.trim() || null });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("שם המשתמש נשמר");
+  const sync = useMutation({
+    mutationFn: async () => runImport({ data: { username: epic.trim() } }),
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["profile", user.id] });
+      if (result.ok) {
+        queryClient.invalidateQueries({ queryKey: ["tournaments"] });
+        toast.success(
+          result.added > 0
+            ? `נמצאו ${result.found} טורנירים, ${result.added} חדשים נוספו לניתוח`
+            : `הכול מעודכן: ${result.found} טורנירים כבר נמצאים אצלך`,
+        );
+        return;
+      }
+      const messages: Record<typeof result.error, string> = {
+        not_found: "לא מצאנו שחקן עם השם הזה ב-Fortnite Tracker. בדוק את האיות של שם המשתמש ב-Epic.",
+        no_events: "השחקן נמצא, אבל אין לו טורנירים ב-Fortnite Tracker עדיין.",
+        fetch_failed: "Fortnite Tracker לא ענה כרגע. נסה שוב בעוד דקה.",
+        save_failed: "הנתונים נמשכו אבל השמירה נכשלה. נסה שוב.",
+      };
+      toast.error(messages[result.error]);
     },
-    onError: () => toast.error("השמירה נכשלה"),
+    onError: () => toast.error("משהו השתבש. בדוק את שם המשתמש ונסה שוב."),
   });
 
   const saved = profile?.epic_username;
-  const trackerUrl = saved
-    ? `https://fortnitetracker.com/profile/all/${encodeURIComponent(saved)}/events`
-    : null;
 
   return (
     <section className="panel stripes p-6 animate-rise">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-xl">
-          <h2 className="text-xl">החשבון שלך ב-Fortnite Tracker</h2>
+          <h2 className="text-xl">ייבוא אוטומטי מ-Fortnite Tracker</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Fortnite Tracker לא מאפשר לאפליקציות אחרות למשוך תוצאות של טורנירים. לכן שומרים כאן את
-            שם המשתמש שלך ב-Epic, פותחים את עמוד האירועים שלך בלחיצה, ומעתיקים את המקום והקילים של כל
-            טורניר. זה לוקח כמה שניות.
+            רשום את שם המשתמש שלך ב-Epic ולחץ על ייבוא. האפליקציה תיכנס לבד ל-Fortnite Tracker, תמשוך את
+            כל הטורנירים שלך (מקום, קילים ומשחקים) ותעדכן את הדוח. כדי לעדכן אחרי טורניר חדש, לוחצים שוב.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            הקילים שמגיעים מ-Fortnite Tracker הם של כל הקבוצה, כי ככה האתר מציג אותם.
           </p>
         </div>
         <form
           className="flex w-full flex-col gap-2 sm:flex-row lg:w-auto"
           onSubmit={(e) => {
             e.preventDefault();
-            save.mutate();
+            if (epic.trim().length < 2) {
+              toast.error("רשום שם משתמש ב-Epic");
+              return;
+            }
+            sync.mutate();
           }}
         >
           <Input
@@ -273,19 +291,24 @@ function TrackerCard() {
             value={epic}
             onChange={(e) => setEpic(e.target.value)}
             className="sm:w-56"
+            disabled={sync.isPending}
           />
-          <Button type="submit" variant="panel" disabled={save.isPending}>
-            שמירה
+          <Button type="submit" variant="hero" disabled={sync.isPending}>
+            {sync.isPending ? (
+              <>
+                <RefreshCw className="animate-spin" /> מושך נתונים...
+              </>
+            ) : (
+              <>
+                <RefreshCw /> {saved ? "עדכון מ-Fortnite Tracker" : "ייבוא טורנירים"}
+              </>
+            )}
           </Button>
-          {trackerUrl && (
-            <Button asChild variant="default">
-              <a href={trackerUrl} target="_blank" rel="noreferrer">
-                <ExternalLink /> פתח את האירועים שלי
-              </a>
-            </Button>
-          )}
         </form>
       </div>
+      {sync.isPending && (
+        <p className="mt-4 text-sm text-accent">נכנס ל-Fortnite Tracker וקורא את הטורנירים שלך. זה יכול לקחת עד חצי דקה.</p>
+      )}
     </section>
   );
 }
@@ -408,7 +431,7 @@ function ResultsTable() {
     return (
       <div className="panel mt-6 p-10 text-center">
         <p className="text-lg">עוד אין טורנירים</p>
-        <p className="mt-1 text-sm text-muted-foreground">לחץ על "הוספת טורניר" והכנס את המקום והקילים מהאירוע האחרון שלך.</p>
+        <p className="mt-1 text-sm text-muted-foreground">רשום למעלה את שם המשתמש שלך ב-Epic ולחץ על ייבוא, או הוסף טורניר ידנית.</p>
       </div>
     );
   }
@@ -439,7 +462,12 @@ function ResultsTable() {
                 <tr key={t.id} className="border-b border-border/60 last:border-0 hover:bg-secondary/40">
                   <td className="px-6 py-3 font-stat text-muted-foreground">{t.event_date.split("-").reverse().join("/")}</td>
                   <td className="px-3 py-3">
-                    <div className="font-medium">{t.name}</div>
+                    <div className="flex items-center gap-2 font-medium">
+                      {t.name}
+                      {t.source === "fortnitetracker" && (
+                        <span className="rounded bg-accent/15 px-1.5 py-0.5 font-stat text-[10px] font-bold text-accent">FT</span>
+                      )}
+                    </div>
                     {t.notes && <div className="text-xs text-muted-foreground">{t.notes}</div>}
                   </td>
                   <td className="px-3 py-3 text-muted-foreground">{MODES[t.mode] ?? t.mode}</td>

@@ -136,7 +136,10 @@ export type Database = {
           notes: string | null
           placement: number
           points: number
+          source: string
+          source_event_id: string | null
           user_id: string
+          wins: number | null
         }
         Insert: {
           created_at?: string
@@ -149,7 +152,10 @@ export type Database = {
           notes?: string | null
           placement: number
           points?: number
+          source?: string
+          source_event_id?: string | null
           user_id?: string
+          wins?: number | null
         }
         Update: {
           created_at?: string
@@ -162,7 +168,10 @@ export type Database = {
           notes?: string | null
           placement?: number
           points?: number
+          source?: string
+          source_event_id?: string | null
           user_id?: string
+          wins?: number | null
         }
         Relationships: []
       }

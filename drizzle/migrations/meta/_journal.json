@@ -8,6 +8,13 @@
       "when": 1795179781808,
       "tag": "0000_create_fortnite_training_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795181890138,
+      "tag": "0001_tournaments_tracker_import",
+      "breakpoints": true
     }
   ]
 }

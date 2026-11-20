@@ -6,4 +6,5 @@
 - [x] Tips: built-in tournament tips + personal tips
 - [x] Daily practice plan: editable blocks + daily check-off
 - [x] App name "Train Comp" across screens
+- [x] Auto-import tournaments from Fortnite Tracker by Epic username
 - [ ] Waiting on user: videos private vs shared with the group (currently private)
