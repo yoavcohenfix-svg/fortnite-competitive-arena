@@ -28,3 +28,11 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+## Project rules
+
+- UI is Hebrew, right-to-left (`dir="rtl"` on `<html>`); use logical spacing/position utilities (`ps-`, `pe-`, `start-`, `end-`, `text-start`) instead of left/right so layouts mirror correctly.
+- Signed-in pages live under `src/routes/_authenticated/` (client-only gate that puts `user` in route context); data is read in the browser with the generated client and protected by owner-only RLS (`user_id = auth.uid()`), so no server functions are needed for per-user CRUD.
+- Query definitions live in `src/lib/queries.ts`; routes preload them in `loader` with `ensureQueryData` and read with `useSuspenseQuery`, mutations invalidate by query key.
+- Tournament analysis is pure functions in `src/lib/analysis.ts` with tests next to it; keep calculations out of components. Fortnite Tracker exposes no per-event results API, so tournament results are entered manually.
+- Training videos are files in the private `training-videos` bucket under `<user_id>/...`, shown through signed URLs.

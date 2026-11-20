@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795179781808,
+      "tag": "0000_create_fortnite_training_schema",
+      "breakpoints": true
+    }
+  ]
+}
