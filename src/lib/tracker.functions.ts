@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { toWhole, toWholeOrNull } from "./numbers";
 import { parseTrackerEvents } from "./tracker-parse";
 
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/firecrawl/v2/scrape";
@@ -79,11 +80,11 @@ export const importFromTracker = createServerFn({ method: "POST" })
         name: e.name,
         event_date: e.eventDate,
         mode: e.mode,
-        placement: e.placement,
-        kills: e.elims,
-        points: e.prPoints,
-        matches_played: e.matches && e.matches > 0 ? e.matches : null,
-        wins: e.wins,
+        placement: toWhole(e.placement),
+        kills: toWhole(e.elims),
+        points: toWhole(e.prPoints),
+        matches_played: e.matches && e.matches > 0 ? toWhole(e.matches) : null,
+        wins: toWholeOrNull(e.wins),
       })),
       { onConflict: "user_id,source_event_id" },
     );

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { placementPoints } from "./live";
-import { nextStart, parseEventsList, parseLiveLeaderboard, parseWindowStarts } from "./live-parse";
+import { nextStart, parseEventsList, parseLiveLeaderboard, parseWindowStarts, eventIdFromInput } from "./live-parse";
 
 const fixture = (name: string) => readFileSync(path.join(__dirname, "__fixtures__", name), "utf8");
 
@@ -18,7 +18,7 @@ describe("parseLiveLeaderboard", () => {
 
   it("reads the match cap and event name", () => {
     expect(snap.matchCap).toBe(12);
-    expect(snap.eventName).toBe("Duos Reload Ranked Cup Battle Royale");
+    expect(snap.eventName).toBe("Duos Reload Ranked Cup (Battle Royale)");
   });
 
   it("uses the scoring of the player's division", () => {
@@ -55,5 +55,21 @@ describe("session start times", () => {
   it("picks the first session that has not started yet", () => {
     const starts = parseWindowStarts(html);
     expect(nextStart(starts, new Date("2026-11-24T00:00:00Z"))).toBe("2026-11-25T15:00:00.000Z");
+  });
+});
+
+describe("eventIdFromInput", () => {
+  it("reads a bare event id", () => {
+    expect(eventIdFromInput("epicgames_S43_TriosCashCup_ME")).toBe("epicgames_S43_TriosCashCup_ME");
+  });
+
+  it("reads an event id out of a full leaderboard URL", () => {
+    expect(
+      eventIdFromInput("https://fortnitetracker.com/events/epicgames_S42_RankedCupReloadDuos_NAC?page=9#912"),
+    ).toBe("epicgames_S42_RankedCupReloadDuos_NAC");
+  });
+
+  it("returns null when there is no event id", () => {
+    expect(eventIdFromInput("Duos Cash Cup")).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, Outlet, redirect, useNavigate } from "@tanstack/react-router";
-import { BarChart3, CalendarClock, Home, Lightbulb, LogOut, PlayCircle } from "lucide-react";
+import { BarChart3, CalendarClock, Home, Lightbulb, LogOut, PlayCircle, Zap } from "lucide-react";
 import { Logo } from "@/components/app/Logo";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated")({
 
 const NAV = [
   { to: "/dashboard", label: "ראשי", icon: Home },
+  { to: "/live", label: "טורניר חי", icon: Zap },
   { to: "/tournaments", label: "מעקב טורנירים", icon: BarChart3 },
   { to: "/training", label: "אימונים", icon: PlayCircle },
   { to: "/tips", label: "טיפים", icon: Lightbulb },

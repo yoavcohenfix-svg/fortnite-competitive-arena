@@ -37,6 +37,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { buildReport, summarize, type Trend } from "@/lib/analysis";
+import { toWhole, toWholeOrNull } from "@/lib/numbers";
 import { MODES, profileQuery, todayKey, tournamentsQuery } from "@/lib/queries";
 import { importFromTracker } from "@/lib/tracker.functions";
 import { cn } from "@/lib/utils";
@@ -330,10 +331,10 @@ function AddTournamentDialog() {
         name: String(form.get("name") ?? "").trim() || "טורניר",
         event_date: String(form.get("event_date") || todayKey()),
         mode,
-        placement,
-        kills: num("kills") ?? 0,
-        points: num("points") ?? 0,
-        matches_played: num("matches_played"),
+        placement: toWhole(placement),
+        kills: toWhole(num("kills") ?? 0),
+        points: toWhole(num("points") ?? 0),
+        matches_played: toWholeOrNull(num("matches_played")),
         notes: String(form.get("notes") ?? "").trim() || null,
       });
       if (error) throw error;

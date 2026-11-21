@@ -151,3 +151,9 @@ export function nextStart(starts: string[], now: Date): string | null {
   const future = starts.filter((s) => new Date(s).getTime() > now.getTime()).sort();
   return future[0] ?? null;
 }
+
+/** Accepts a bare event id or a full Fortnite Tracker event URL and returns the event id, or null. */
+export function eventIdFromInput(value: string): string | null {
+  const match = value.trim().match(/epicgames_[A-Za-z0-9_]+/);
+  return match ? match[0] : null;
+}
